@@ -4,72 +4,58 @@ description: GitHub Actions for building and testing static site projects
 inputs:
   project-path:
     description: The path to the project to check
-    type: string
     required: false
     default: ''
   is-sub-path:
     description: Whether the project is a sub-path
-    type: boolean
     required: false
-    default: false
+    default: 'false'
   package-manager:
     description: The package manager which is used to manager dependencies
-    type: string
     required: false
     default: 'pnpm'
   package-manager-version:
     description: The version of package manager to use
-    type: string
     required: false
-    default: '8'
+    default: 'latest'
   lock-file:
     description: The lock file which is used to manage dependencies
-    type: string
     required: false
     default: 'pnpm-lock.yaml'
   node-version:
     description: The version of Node.js to use
-    type: string
     required: false
     default: 'latest'
   lint-script:
     description: The script name to lint code
-    type: string
     required: false
     default: lint
   build-script:
     description: The script name to build the project
-    type: string
     required: false
     default: build
   test-script:
     description: The script name to run test cases
-    type: string
     required: false
     default: test
   skip-lint:
     description: Skip the lint step
-    type: boolean
     required: false
-    default: false
+    default: 'false'
   skip-build:
     description: Skip the build step
-    type: boolean
     required: false
-    default: false
+    default: 'false'
   skip-test:
     description: Skip the test step
-    type: boolean
     required: false
-    default: false
+    default: 'false'
   artifact-name:
     description: The name of the artifact to upload
-    type: string
     required: false
     default: 'dist'
   output-dir:
     description: The path to the output directory
-    type: string
     required: false
     default: 'dist/'
 
@@ -100,11 +86,11 @@ runs:
 
     - name: Checkout
       if: github.repository != 'ghacts/static-site' || env.SKIP_CHECKOUT != 'true'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup pnpm
       if: env.NODE_PACKAGE_MANAGER == 'pnpm' && env.PNPM_WORKING_DIR == ''
-      uses: pnpm/action-setup@v2
+      uses: pnpm/action-setup@v3
       with:
         version: "${{ inputs.package-manager-version }}"
         run_install: |
@@ -112,7 +98,7 @@ runs:
 
     - name: Setup pnpm
       if: env.NODE_PACKAGE_MANAGER == 'pnpm' && env.PNPM_WORKING_DIR != ''
-      uses: pnpm/action-setup@v2
+      uses: pnpm/action-setup@v3
       with:
         version: "${{ inputs.package-manager-version }}"
         run_install: |
@@ -121,14 +107,14 @@ runs:
 
     - name: Set up Node
       if: inputs.is-sub-path == 'false'
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache: ${{ env.NODE_PACKAGE_MANAGER }}
 
     - name: Set up Node sub path
       if: inputs.is-sub-path == 'true'
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache: ${{ env.NODE_PACKAGE_MANAGER }}
@@ -136,14 +122,16 @@ runs:
 
     - name: Install dependencies
       if: env.NODE_PACKAGE_MANAGER != 'pnpm'
-      run: cd ${WORKING_DIR} && ${NODE_PACKAGE_MANAGER} install
+      working-directory: ${{ env.WORKING_DIR }}
+      run: ${NODE_PACKAGE_MANAGER} install
       shell: bash
 
     - name: Lint code
       if: inputs.skip-lint == 'false'
       env:
         LINT_SCRIPT: "${{ inputs.lint-script }}"
-      run: cd ${WORKING_DIR} && ${NODE_PACKAGE_MANAGER} run ${LINT_SCRIPT}
+      working-directory: ${{ env.WORKING_DIR }}
+      run: ${NODE_PACKAGE_MANAGER} run ${LINT_SCRIPT}
       shell: bash
 
     - name: Skip running lint
@@ -155,12 +143,13 @@ runs:
       if: inputs.skip-build == 'false'
       env:
         BUILD_SCRIPT: "${{ inputs.build-script }}"
-      run: cd ${WORKING_DIR} && ${NODE_PACKAGE_MANAGER} run ${BUILD_SCRIPT}
+      working-directory: ${{ env.WORKING_DIR }}
+      run: ${NODE_PACKAGE_MANAGER} run ${BUILD_SCRIPT}
       shell: bash
 
     - name: Upload artifact
-      if: inputs.skip-build == 'false'
-      uses: actions/upload-artifact@v3
+      if: inputs.skip-build == 'false' && success()
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: "${{ env.WORKING_DIR }}/${{ inputs.output-dir }}"
@@ -174,7 +163,8 @@ runs:
       if: inputs.skip-test  == 'false'
       env:
         TEST_SCRIPT: "${{ inputs.test-script }}"
-      run: cd ${WORKING_DIR} && ${NODE_PACKAGE_MANAGER} run ${TEST_SCRIPT}
+      working-directory: ${{ env.WORKING_DIR }}
+      run: ${NODE_PACKAGE_MANAGER} run ${TEST_SCRIPT}
       shell: bash
 
     - name: Skip testing
