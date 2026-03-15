@@ -25,9 +25,9 @@ jobs:
           - macos-latest
           - windows-latest
         node-version:
-          - '20'
-          - '21'
-          - '22'
+          - '23'
+          - '24'
+          - '25'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
