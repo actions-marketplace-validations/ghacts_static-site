@@ -25,19 +25,19 @@ jobs:
           - macos-latest
           - windows-latest
         node-version:
-          - '20'
-          - '21'
-          - '22'
+          - '23'
+          - '24'
+          - '25'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout project sample-astro-npm
         id: checkout-astro-npm
         if: always() && steps.checkout.outcome == 'success'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: 'ghacts/sample-astro-npm'
           ref: main
@@ -59,7 +59,7 @@ jobs:
       - name: Checkout project sample-astro-pnpm
         id: checkout-astro-pnpm
         if: always() && steps.checkout.outcome == 'success'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: 'ghacts/sample-astro-pnpm'
           ref: main

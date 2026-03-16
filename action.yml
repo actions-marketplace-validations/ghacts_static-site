@@ -86,41 +86,50 @@ runs:
 
     - name: Checkout
       if: github.repository != 'ghacts/static-site' || env.SKIP_CHECKOUT != 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
-    - name: Setup pnpm
-      if: env.NODE_PACKAGE_MANAGER == 'pnpm' && env.PNPM_WORKING_DIR == ''
-      uses: pnpm/action-setup@v3
+    - name: Install pnpm
+      if: env.NODE_PACKAGE_MANAGER == 'pnpm'
+      uses: pnpm/action-setup@v4
       with:
         version: "${{ inputs.package-manager-version }}"
-        run_install: |
-          - args: [--frozen-lockfile]
+        run_install: false
 
-    - name: Setup pnpm
-      if: env.NODE_PACKAGE_MANAGER == 'pnpm' && env.PNPM_WORKING_DIR != ''
-      uses: pnpm/action-setup@v3
-      with:
-        version: "${{ inputs.package-manager-version }}"
-        run_install: |
-          - args: [--frozen-lockfile]
-            cwd: "${{ env.WORKING_DIR }}"
+    - name: Ensure PNPM Cache Directory exists
+      if: env.NODE_PACKAGE_MANAGER == 'pnpm'
+      shell: bash
+      run: |
+        PNPM_STORE_PATH="$(pnpm store path --silent)"
+        if [ ! -d "${PNPM_STORE_PATH}" ]; then
+          echo "PNPM store directory does not exist, creating it."
+          mkdir -p "${PNPM_STORE_PATH}"
+        else
+          echo "PNPM store directory already exists."
+        fi
 
     - name: Set up Node
       if: inputs.is-sub-path == 'false'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         cache: ${{ env.NODE_PACKAGE_MANAGER }}
 
     - name: Set up Node sub path
       if: inputs.is-sub-path == 'true'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         cache: ${{ env.NODE_PACKAGE_MANAGER }}
         cache-dependency-path: "${{ env.WORKING_DIR }}/${{ inputs.lock-file }}"
 
-    - name: Install dependencies
+    - name: Install dependencies - pnpm
+      if: env.NODE_PACKAGE_MANAGER == 'pnpm'
+      shell: bash
+      run: |
+        [ -n "${{ env.WORKING_DIR }}" ] && { cd "${{ env.WORKING_DIR }}" || exit 1; }
+        pnpm install --frozen-lockfile
+
+    - name: Install dependencies - ${{ env.NODE_PACKAGE_MANAGER }}
       if: env.NODE_PACKAGE_MANAGER != 'pnpm'
       working-directory: ${{ env.WORKING_DIR }}
       run: ${NODE_PACKAGE_MANAGER} install
@@ -149,7 +158,7 @@ runs:
 
     - name: Upload artifact
       if: inputs.skip-build == 'false' && success()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ inputs.artifact-name }}
         path: "${{ env.WORKING_DIR }}/${{ inputs.output-dir }}"
